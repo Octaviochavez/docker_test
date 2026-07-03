@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  #Servicio 1: La base de datos
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=mi_database
+      - POSTGRES_USER=usuario
+      - POSTGRES_PASSWORD=secreto
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usuario"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # Servicio 2: Nuestra aplicación de Python
+  app:
+    build: . #Indica que debe construir la imagen usando el Dockerfile Actual
+    environment:
+      - DB_HOST=db #Nota: el host es el nombre del servicio 'db'
+      - DB_NAME=mi_database
+      - DB_USER=usuario
+      - DB_PASSWORD=secreto
+    ports:
+      - "8000:8000"
+    depends_on:
+      db: #Le dice a Docker que no encienda 'app' hasta que 'db' esté corriendo
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: docker_test_network
+
+#docker-compose nos permite levantar nuestro proyecto en un unico comando
+#docker compose up --build
+#up: enciende todos los servicios declarados
+#--build: Le dice a Docker que vuelva a compilar el codigo de python (por si realizamos cambios en el script) antes de encender
